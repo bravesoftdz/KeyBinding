@@ -24,13 +24,12 @@ unit Dupline;
 interface
 
 uses
-  SysUtils, Classes, Dialogs, Controls,
-  Windows { for TShortcut } ,
+  SysUtils, Classes, Vcl.Dialogs, Vcl.Controls, Windows { for TShortcut } ,
 {$IFDEF LINUX}
   QMenus, { for Shortcut }
 {$ENDIF}
 {$IFDEF MSWINDOWS}
-  Menus, { for Shortcut }
+  Vcl.Menus, { for Shortcut }
 {$ENDIF}
   ToolsAPI;
 // If ToolsAPI will not compile, add 'designide.dcp' to your Requires clause
@@ -43,12 +42,9 @@ type
   TDupLineBinding = class(TNotifierObject, IOTAKeyboardBinding)
   private
   public
-    procedure Dupline(const Context: IOTAKeyContext; KeyCode: TShortcut;
-      var BindingResult: TKeyBindingResult);
-    procedure AppendComment(const Context: IOTAKeyContext; KeyCode: TShortcut;
-      var BindingResult: TKeyBindingResult);
-    procedure CommentToggle(const Context: IOTAKeyContext; KeyCode: TShortcut;
-      var BindingResult: TKeyBindingResult);
+    procedure Dupline(const Context: IOTAKeyContext; KeyCode: TShortcut; var BindingResult: TKeyBindingResult);
+    procedure AppendComment(const Context: IOTAKeyContext; KeyCode: TShortcut; var BindingResult: TKeyBindingResult);
+    procedure CommentToggle(const Context: IOTAKeyContext; KeyCode: TShortcut; var BindingResult: TKeyBindingResult);
     { IOTAKeyboardBinding }
     function GetBindingType: TBindingType;
     function GetDisplayName: string;
@@ -57,20 +53,10 @@ type
   end;
 
 procedure Register;
-begin (BorlandIDEServices as IOTAKeyboardServices)
-  .AddKeyboardBinding(TDupLineBinding.Create);
+begin
+  (BorlandIDEServices as IOTAKeyboardServices).AddKeyboardBinding(TDupLineBinding.Create);
 end;
 
-{ TKeyBindingImpl }
-{ TKeyBindingImpl }
-{ TKeyBindingImpl }
-{ TKeyBindingImpl }
-{ TKeyBindingImpl }
-{ TKeyBindingImpl }
-{ TKeyBindingImpl }
-{ TKeyBindingImpl }
-{ TKeyBindingImpl }
-{ TKeyBindingImpl }
 { TKeyBindingImpl }
 
 function TDupLineBinding.GetBindingType: TBindingType;
@@ -88,8 +74,7 @@ begin
   Result := 'jdsi.dupline';
 end;
 
-procedure TDupLineBinding.BindKeyboard
-  (const BindingServices: IOTAKeyBindingServices);
+procedure TDupLineBinding.BindKeyboard(const BindingServices: IOTAKeyBindingServices);
 begin
   BindingServices.AddKeyBinding([Shortcut(Ord('D'), [ssShift, ssCtrl])], Dupline, nil);
   BindingServices.AddKeyBinding([Shortcut(Ord('C'), [ssShift, ssCtrl, ssAlt])], AppendComment, nil);
@@ -97,8 +82,7 @@ begin
   // Add additional key bindings here
 end;
 
-procedure TDupLineBinding.Dupline(const Context: IOTAKeyContext;
-  KeyCode: TShortcut; var BindingResult: TKeyBindingResult);
+procedure TDupLineBinding.Dupline(const Context: IOTAKeyContext; KeyCode: TShortcut; var BindingResult: TKeyBindingResult);
 var
   EditPosition: IOTAEditPosition;
   EditBlock: IOTAEditBlock;
@@ -106,7 +90,7 @@ var
   CurrentRowEnd: Integer;
   BlockSize: Integer;
   IsAutoIndent: Boolean;
-  CodeLine: String;
+  CodeLine: string;
 begin
   EditPosition := Context.EditBuffer.EditPosition;
   EditBlock := Context.EditBuffer.EditBlock;
@@ -125,9 +109,7 @@ begin
       Context.EditBuffer.BufferOptions.AutoIndent := False;
     // If no block is selected, or the selected block is a single line,
     // then duplicate just the current line
-    if (BlockSize = 0) or (EditBlock.StartingRow = EditPosition.Row) or
-      ((BlockSize <> 0) and ((EditBlock.StartingRow + 1) = (EditPosition.Row))
-        and (EditBlock.EndingColumn = 1)) then
+    if (BlockSize = 0) or (EditBlock.StartingRow = EditPosition.Row) or ((BlockSize <> 0) and ((EditBlock.StartingRow + 1) = (EditPosition.Row)) and (EditBlock.EndingColumn = 1)) then
     begin
       // Only a single line to duplicate
       // Move to end of current line
@@ -166,8 +148,7 @@ begin
   end;
 end;
 
-procedure TDupLineBinding.AppendComment(const Context: IOTAKeyContext;
-  KeyCode: TShortcut; var BindingResult: TKeyBindingResult);
+procedure TDupLineBinding.AppendComment(const Context: IOTAKeyContext; KeyCode: TShortcut; var BindingResult: TKeyBindingResult);
 var
   ep: IOTAEditPosition;
   c: Integer;
@@ -182,8 +163,7 @@ begin
   BindingResult := krHandled;
 end;
 
-procedure TDupLineBinding.CommentToggle(const Context: IOTAKeyContext;
-  KeyCode: TShortcut; var BindingResult: TKeyBindingResult);
+procedure TDupLineBinding.CommentToggle(const Context: IOTAKeyContext; KeyCode: TShortcut; var BindingResult: TKeyBindingResult);
 var
   ep: IOTAEditPosition;
   eb: IOTAEditBlock;
@@ -215,33 +195,33 @@ begin
 
   // toggle comments
   repeat
-  begin
-    ep.Move(SRow, 1);
-    while ep.IsWhiteSpace do
-      ep.MoveRelative(0, 1);
-    if ep.Character = '/' then
     begin
-      ep.MoveRelative(0, 1);
+      ep.Move(SRow, 1);
+      while ep.IsWhiteSpace do
+        ep.MoveRelative(0, 1);
       if ep.Character = '/' then
-        Comment := True
+      begin
+        ep.MoveRelative(0, 1);
+        if ep.Character = '/' then
+          Comment := True
+        else
+          Comment := False
+      end
       else
-        Comment := False
-    end
-    else
-      Comment := False;
+        Comment := False;
 
-    if Comment then
-    begin
-      ep.MoveRelative(0, -1);
-      ep.Delete(2);
-    end
-    else
-    begin
-      ep.MoveBOL;
-      ep.InsertText('//');
+      if Comment then
+      begin
+        ep.MoveRelative(0, -1);
+        ep.Delete(2);
+      end
+      else
+      begin
+        ep.MoveBOL;
+        ep.InsertText('//');
+      end;
+      Inc(SRow);
     end;
-    Inc(SRow);
-  end;
   until (SRow > ERow);
   // update caret position
   ep.Restore;
@@ -251,3 +231,4 @@ begin
 end;
 
 end.
+
